@@ -1,0 +1,9 @@
+# Basic CODEOWNERS
+# The repo owner team should always be the default owner
+
+* @setscale/internal-tooling
+
+# Cloud ops should review docker stuff
+
+dockerfile @setscale/cloud-ops
+docker-compose.yml @setscale/cloud-ops

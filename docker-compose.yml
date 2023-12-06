@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  ${FULL_SERVICE_NAME}:
+    image: ${FULL_SERVICE_NAME}:latest
+    ports:
+      - "${QUARKUS_HTTP_PORT}:8080"
+    depends_on:
+      - postgres
+      - keycloak
+    volumes:
+      - ./local-data:/local-data
+    profiles: ["all"]
+    environment:
+      - quarkus.datasource.jdbc.url=jdbc:postgresql://postgres:${POSTGRES_PORT}/${SERVICE_PACKAGE_NAME}
+      - quarkus.oidc.int-underwriting.auth-server-url=http://${KEYCLOAK_URL}:${KEYCLOAK_PORT}/realms/int-underwriting
+      - quarkus.oidc.ext-seller-partner.auth-server-url=http://${KEYCLOAK_URL}:${KEYCLOAK_PORT}/realms/ext-seller-partner
+  postgres:
+    image: postgres:14.2
+    environment:
+      - POSTGRES_USER=${SERVICE_PACKAGE_NAME}
+      - POSTGRES_PASSWORD=test123
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    profiles: ["dev","all"]
+    volumes:
+      - ./local-data:/local-data

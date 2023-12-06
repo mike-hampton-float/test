@@ -1,0 +1,2 @@
+## local files
+Put any files you want accessible inside the containers here. They will be in the container local directory called ' local-data'. you can also create files in this directory inside the containers (keycloak exports, db dumps , stack traces if you are that desperate) to make it easier to get data out of a container. 

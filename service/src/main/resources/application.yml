@@ -1,0 +1,89 @@
+quarkus:
+  datasource:
+    db-kind: postgresql
+  log:
+    min-level: TRACE
+    category:
+      "org.apache.http":
+        min-level: DEBUG
+      "com.setscale":
+        min-level: TRACE
+    level: DEBUG
+  http:
+    access-log:
+      enabled: true
+    record-request-start-time: true
+    non-application-root-path: ${SERVICE_NAME}/q
+  hibernate-orm:
+    physical-naming-strategy: com.setscale.namingstrategy.SnakeCasePhysicalNamingStrategy
+  native:
+    additional-build-args:
+      - --initialize-at-run-time=io.grpc.netty.shaded.io.netty.util.internal.logging.Slf4JLoggerFactory
+#  oidc-client:
+#    auth-server-url: ${quarkus.oidc.int-underwriting.auth-server-url}
+#    client-id: ${quarkus.oidc.client-id}
+#    credentials:
+#      secret: ${quarkus.oidc.credentials.secret}
+#    grant:
+#      type: client
+setscale:
+  keycloak:
+    default-realm: int-underwriting
+"%test":
+  quarkus:
+    flyway:
+      connect-retries: 60
+      migrate-at-start: true
+      schemas: ${SERVICE_PACKAGE_NAME}
+      baseline-on-migrate: true
+    hibernate-orm:
+      log:
+        sql: true
+        bind-parameters: true
+    log:
+      console:
+        json: false
+    datasource:
+      devservices:
+        db-name: ${SERVICE_PACKAGE_NAME}
+        properties:
+          currentSchema: ${SERVICE_PACKAGE_NAME}
+  pubsub:
+    emulator:
+      host: localhost:${PUBSUB_EMULATOR_PORT:10090}
+  setscale:
+    pubsub:
+      funding-event:
+        subscription: not-a-subscription
+    env: test
+"%prod":
+  quarkus:
+    flyway:
+      connect-retries: 60
+      migrate-at-start: true
+      schemas: ${SERVICE_PACKAGE_NAME}
+      baseline-on-migrate: true
+    oidc:
+      int-underwriting:
+        auth-server-url: ${quarkus.oidc.auth-server-url}/realms/int-underwriting
+      ext-seller-partner:
+        auth-server-url: ${quarkus.oidc.auth-server-url}/realms/ext-seller-partner
+"%dev":
+  quarkus:
+    flyway:
+      connect-retries: 60
+      migrate-at-start: true
+      schemas: ${SERVICE_PACKAGE_NAME}
+      baseline-on-migrate: true
+    hibernate-orm:
+      log:
+        sql: true
+        bind-parameters: true
+    oidc:
+      int-underwriting:
+        auth-server-url: ${quarkus.oidc.auth-server-url}/realms/int-underwriting
+      ext-seller-partner:
+        auth-server-url: ${quarkus.oidc.auth-server-url}/realms/ext-seller-partner
+  pubsub:
+    emulator:
+      host: localhost:${PUBSUB_EMULATOR_PORT:10090}

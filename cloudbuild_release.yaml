@@ -1,0 +1,39 @@
+steps:
+  - id: Prepare Git
+    name: us-east1-docker.pkg.dev/global-shared-host-9176/setscale-docker/mvnbuild:latest
+    secretEnv: [ CLOUD_BUILD_DEPLOY_KEY ]
+    entrypoint: bash
+    args:
+      - '-c'
+      - |-
+        echo "$$CLOUD_BUILD_DEPLOY_KEY" >> /root/.ssh/id_rsa
+        chmod 600 /root/.ssh/id_rsa
+        cat <<EOF >/root/.ssh/config
+        Hostname github.com
+        IdentityFile /root/.ssh/id_rsa
+        EOF
+        ssh-keyscan -t rsa github.com > /root/.ssh/known_hosts
+    volumes:
+      - name: ssh
+        path: /root/.ssh
+
+  - id: Maven Release
+    name: us-east1-docker.pkg.dev/global-shared-host-9176/setscale-docker/mvnbuild:latest
+    entrypoint: bash
+    dir: /workspace
+    args:
+      - '-c'
+      - |-
+        git config --global user.name "cloudbuildci"
+        git config --global user.email "andy.barilla@float.financial"
+        git branch -m main
+        mvn -B -DtagNameFormat=releases/@{version} -DskipTests=true --no-transfer-progress release:prepare
+        mvn -B -DtagNameFormat=releases/@{version} -DskipTests=true --no-transfer-progress release:perform
+    volumes:
+      - name: ssh
+        path: /root/.ssh
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/13862403859/secrets/global-cloud-build-deploy-key/versions/1
+      env: CLOUD_BUILD_DEPLOY_KEY

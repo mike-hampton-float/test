@@ -1,0 +1,8 @@
+steps:
+  - name: us-east1-docker.pkg.dev/global-shared-host-9176/setscale-docker/mvnbuild:latest
+    entrypoint: mvn
+    args:
+      - 'test'
+    id: 'run-unit-tests'
+options:
+  machineType: 'E2_HIGHCPU_8'

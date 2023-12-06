@@ -1,0 +1,14 @@
+{
+  "name": "quarkus-post-template-action",
+  "version": "1.0.0",
+  "description": "Replaces tokens in repos created from the Quarkus template.",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "ncc build src/index.js --license licenses.txt"
+  },
+  "dependencies": {
+    "@actions/core": "^1.9.0",
+    "@actions/github": "^5.0.3"
+  }
+}

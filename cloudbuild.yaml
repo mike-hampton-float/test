@@ -1,0 +1,112 @@
+steps:
+  #- name: gcr.io/cloud-builders/mvn
+  #  args: ['test']
+  #  id: 'run-unit-tests'
+  - name: us-east1-docker.pkg.dev/global-shared-host-9176/setscale-docker/mvnbuild:latest
+    entrypoint: mvn
+    args:
+      - '-e'
+      - 'package'
+      - '-DskipTests'
+      - '--no-transfer-progress'
+    id: 'build'
+  - name: 'gcr.io/cloud-builders/docker:20.10.3'
+    args:
+      - 'run'
+      - '--privileged'
+      - 'linuxkit/binfmt:v0.7'
+    id: 'initialize-qemu'
+  - name: 'gcr.io/cloud-builders/docker:20.10.3'
+    args:
+      - 'buildx'
+      - 'create'
+      - '--name'
+      - 'mybuilder'
+    id: 'create-builder'
+  - name: 'gcr.io/cloud-builders/docker:20.10.3'
+    args:
+      - 'buildx'
+      - 'use'
+      - 'mybuilder'
+    id: 'select-builder'
+  - name: 'gcr.io/cloud-builders/docker:20.10.3'
+    args:
+      - 'buildx'
+      - 'inspect'
+      - '--bootstrap'
+    id: 'show-target-build-platforms'
+  - name: gcr.io/cloud-builders/docker:20.10.3
+    args:
+      - 'buildx'
+      - 'build'
+      - '--platform'
+      - '$_DOCKER_BUILDX_PLATFORMS'
+      - '-t'
+      - 'us-east1-docker.pkg.dev/global-shared-host-9176/setscale-docker/${FULL_SERVICE_NAME}:$SHORT_SHA'
+      - '-t'
+      - 'us-east1-docker.pkg.dev/global-shared-host-9176/setscale-docker/${FULL_SERVICE_NAME}:latest'
+      - '--push'
+      - '-f'
+      - 'service/src/main/docker/Dockerfile.jvm'
+      - 'service/'
+
+  - name: us-east1-docker.pkg.dev/global-shared-host-9176/setscale-docker/mvnbuild:latest
+    entrypoint: mvn
+    args:
+      - "deploy"
+      - "-DskipTests"
+      - "--no-transfer-progress"
+    id: "Publish snapshots"
+
+  - id: 'Prepare Git - Cloud Env'
+    name: us-east1-docker.pkg.dev/global-shared-host-9176/setscale-docker/mvnbuild:latest
+    secretEnv: [ GITOPS_CLOUD_BUILD_DEPLOY_KEY ]
+    entrypoint: bash
+    args:
+    - '-c'
+    - |-
+      echo "$$GITOPS_CLOUD_BUILD_DEPLOY_KEY" >> /root/.ssh/id_rsa
+      chmod 600 /root/.ssh/id_rsa
+      cat <<EOF >/root/.ssh/config
+      Hostname github.com
+      IdentityFile /root/.ssh/id_rsa
+      EOF
+      ssh-keyscan -t rsa github.com > /root/.ssh/known_hosts
+    volumes:
+    - name: ssh
+      path: /root/.ssh
+
+  - id: 'Update Kustomization'
+    name: us-east1-docker.pkg.dev/global-shared-host-9176/setscale-docker/mvnbuild:latest
+    secretEnv: [ GITOPS_CLOUD_BUILD_DEPLOY_KEY ]
+    entrypoint: bash
+    args:
+    - '-c'
+    - |
+      echo "Cloning repo ..."
+      git clone --depth 1 git@github.com:setscale/cloud-env.git
+      echo "Updating image ..."
+      cd /workspace/cloud-env/${SERVICE_NAME}/us/dev
+      ls
+      /usr/local/bin/kustomize edit set image replaceme:latest=us-east1-docker.pkg.dev/global-shared-host-9176/setscale-docker/${FULL_SERVICE_NAME}:"$SHORT_SHA"
+      echo "Pushing changes to git config repo ..."
+      git config --global user.name cibot
+      git config --global user.email cibot@float.financial
+      git status
+      git add -A
+      git commit -m "Updated dev image for ${service_name} service from ${REPO_NAME} commit ${SHORT_SHA}"
+      git push origin main
+    volumes:
+    - name: ssh
+      path: /root/.ssh
+
+options:
+  env:
+    - 'DOCKER_CLI_EXPERIMENTAL=enabled'
+#   machineType: E2_HIGHCPU_32
+substitutions:
+  _DOCKER_BUILDX_PLATFORMS: 'linux/amd64,linux/arm64'
+availableSecrets:
+  secretManager:
+    - versionName: projects/13862403859/secrets/global-cloud-env-rw-deploy-key/versions/1
+      env: GITOPS_CLOUD_BUILD_DEPLOY_KEY

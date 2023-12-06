@@ -1,0 +1,26 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+registries:
+  setscale-maven:
+    type: maven-repository
+    url: https://us-east1-maven.pkg.dev/global-shared-host-9176/setscale-maven
+    username: _json_key_base64
+    password: ${{secrets.SETSCALE_MAVEN_PASSWORD}}
+updates:
+  - package-ecosystem: "maven"
+    directory: "/"
+    registries: "*"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 25
+    reviewers:
+      - "setscale/engineering"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
+      - dependency-name: "io.quarkus:*"
+        update-types: [version-update:semver-major]
